@@ -41,7 +41,11 @@ void touch_read( lv_indev_t * indev, lv_indev_data_t * data ) {
 #else
   // Resistive touch is already mapped by the bb_spi_lcd library
   if(lcd->rtReadTouch(&ti)) {
+    data->point.x = ti.x[0];
+    data->point.y = ti.y[0];
 #endif
+
+    data->state = LV_INDEV_STATE_PRESSED;
 
     Serial.print("mapped touch x: ");
     Serial.print(data->point.x);
