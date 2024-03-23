@@ -1,44 +1,52 @@
 #include <lvgl.h>
 
 #include <bb_spi_lcd.h>
-#include <lv_bb_spi_lcd.h>
-
-#include <bb_captouch.h>
+#include <display/lv_bb_spi_lcd.h>
 
 #include <demos/lv_demos.h>
 
+#ifdef TOUCH_CAPACITIVE
+#include <bb_captouch.h>
+
 BBCapTouch bbct;
+uint16_t touchMinX = TOUCH_MIN_X, touchMaxX = TOUCH_MAX_X, touchMinY = TOUCH_MIN_Y, touchMaxY = TOUCH_MAX_Y;
+#else
+BB_SPI_LCD * lcd;
+#endif
+
 TOUCHINFO ti;
 
-uint16_t touchMinX = TOUCH_MIN_X, touchMaxX = TOUCH_MAX_X, touchMinY = TOUCH_MIN_Y, touchMaxY = TOUCH_MAX_Y;
 
 uint32_t lastTick = 0;
 
 void touch_read( lv_indev_t * indev, lv_indev_data_t * data ) {
+
+#ifdef TOUCH_CAPACITIVE
+  // Capacitive touch needs to be mapped to display pixels
   if(bbct.getSamples(&ti)) {
-    for (int i=0; i<ti.count; i++) {
-      Serial.print("raw touch x: ");
-      Serial.print(ti.x[i]);
-      Serial.print(" y: ");
-      Serial.print(ti.y[i]);
+    Serial.print("raw touch x: ");
+    Serial.print(ti.x[0]);
+    Serial.print(" y: ");
+    Serial.println(ti.y[0]);
 
-      if(ti.x[i] < touchMinX) touchMinX = ti.x[i];
-      if(ti.x[i] > touchMaxX) touchMaxX = ti.x[i];
-      if(ti.y[i] < touchMinY) touchMinY = ti.y[i];
-      if(ti.y[i] > touchMaxY) touchMaxY = ti.y[i];
+    if(ti.x[0] < touchMinX) touchMinX = ti.x[0];
+    if(ti.x[0] > touchMaxX) touchMaxX = ti.x[0];
+    if(ti.y[0] < touchMinY) touchMinY = ti.y[0];
+    if(ti.y[0] > touchMaxY) touchMaxY = ti.y[0];
 
-      //Map this to the pixel position
-      data->point.x = map(ti.x[i], touchMinX, touchMaxX, 1, lv_display_get_horizontal_resolution(NULL)); // X touch mapping
-      data->point.y = map(ti.y[i], touchMinY, touchMaxY, 1, lv_display_get_vertical_resolution(NULL)); // Y touch mapping
-      data->state = LV_INDEV_STATE_PRESSED;
+    //Map this to the pixel position
+    data->point.x = map(ti.x[0], touchMinX, touchMaxX, 1, lv_display_get_horizontal_resolution(NULL)); // X touch mapping
+    data->point.y = map(ti.y[0], touchMinY, touchMaxY, 1, lv_display_get_vertical_resolution(NULL)); // Y touch mapping
+    data->state = LV_INDEV_STATE_PRESSED;
+#else
+  // Resistive touch is already mapped by the bb_spi_lcd library
+  if(lcd->rtReadTouch(&ti)) {
+#endif
 
-      Serial.print("mapped touch x: ");
-      Serial.print(data->point.x);
-      Serial.print(" y: ");
-      Serial.println(data->point.y);
-      
-      return;
-    }
+    Serial.print("mapped touch x: ");
+    Serial.print(data->point.x);
+    Serial.print(" y: ");
+    Serial.println(data->point.y);
   } else {
     data->state = LV_INDEV_STATE_RELEASED;
   }
@@ -51,8 +59,14 @@ void setup() {
   lv_init();
   lv_display_t* disp = lv_bb_spi_lcd_create(DISPLAY_TYPE);
 
+#ifdef TOUCH_CAPACITIVE
   // Initialize touch screen
   bbct.init(TOUCH_SDA, TOUCH_SCL, TOUCH_RST, TOUCH_INT);
+#else
+  lv_bb_spi_lcd_t* dsc = (lv_bb_spi_lcd_t *)lv_display_get_driver_data(disp);
+  lcd = dsc->lcd;
+  lcd->rtInit(TOUCH_MOSI, TOUCH_MISO, TOUCH_CLK, TOUCH_CS);
+#endif
 
   // Register touch
   lv_indev_t* indev = lv_indev_create();
