@@ -16,9 +16,6 @@ BB_SPI_LCD * lcd;
 
 TOUCHINFO ti;
 
-
-uint32_t lastTick = 0;
-
 void touch_read( lv_indev_t * indev, lv_indev_data_t * data ) {
 
 #ifdef TOUCH_CAPACITIVE
@@ -84,8 +81,7 @@ void setup() {
 }
 
 void loop() {   
-  lv_tick_inc(millis() - lastTick); //Update the tick timer. Tick is new for LVGL 9
-  lastTick = millis();
+  lv_tick_set_cb(millis);
   lv_timer_handler();               //Update the UI
   delay(5);
 }
