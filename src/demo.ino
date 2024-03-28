@@ -58,7 +58,9 @@ void setup() {
 
   // Initialise LVGL
   lv_init();
-  lv_tick_set_cb(millis);
+  lv_tick_set_cb([](){ 
+    return (uint32_t) (esp_timer_get_time() / 1000ULL);
+  });
   lv_display_t* disp = lv_bb_spi_lcd_create(DISPLAY_TYPE);
 
 #ifdef TOUCH_CAPACITIVE

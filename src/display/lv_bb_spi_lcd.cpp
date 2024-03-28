@@ -66,21 +66,15 @@ static void flush_cb(lv_display_t * disp, const lv_area_t * area, uint8_t * px_m
 {
     lv_bb_spi_lcd_t * dsc = (lv_bb_spi_lcd_t *)lv_display_get_driver_data(disp);
 
-    uint32_t x1 = area->x1 < 0 ? 0: area->x1;
-    uint32_t y1 = area->y1 < 0 ? 0: area->y1;
-
-    uint32_t x2 = area->x2 > dsc->lcd->width() ? dsc->lcd->width(): area->x2;
-    uint32_t y2 = area->x2 > dsc->lcd->height() ? dsc->lcd->height(): area->y2;
-
-    uint32_t w = (x2 - x1 + 1);
-    uint32_t h = (y2 - y1 + 1);
+    uint32_t w = (area->x2 - area->x1 + 1);
+    uint32_t h = (area->y2 - area->y1 + 1);
     uint16_t *p = (uint16_t *)px_map;
 
     // bb_spi_lcd needs big-endian
     for (int i=0; i<w*h; i++) {
         p[i] = __builtin_bswap16(p[i]);
     }
-    dsc->lcd->setAddrWindow(x1, y1, w, h);
+    dsc->lcd->setAddrWindow(area->x1, area->y1, w, h);
     dsc->lcd->pushPixels((uint16_t *)px_map, w * h); //, DRAW_TO_LCD | DRAW_WITH_DMA);
 
     lv_display_flush_ready(disp);
